@@ -43,6 +43,9 @@ import parrySuccess5 from "../assets/attack/parry_success_5.png";
 
 import parryFail from "../assets/attack/parry_fail.png";
 
+import star1 from "../assets/attack/starforce_1.png";
+import star2 from "../assets/attack/starforce_2.png";
+
 export const frames = {
   parry: {
     pre: {
@@ -64,5 +67,6 @@ export const frames = {
       LEFT: [fakeL1, fakeL2, fakeL3, fakeL4, fakeL5],
       RIGHT: [fakeR1, fakeR2, fakeR3, fakeR4, fakeR5]
     }
-  }
+  },
+  starforce: [star1, star2],
 };

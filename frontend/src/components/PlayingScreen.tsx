@@ -1,11 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { 
-  parryPattern, 
-  fakeParryPattern, 
-  chainParryStep, 
-  stopCurrentPattern, 
-  playSuccessEffect, 
-  playFailEffect 
+  parryPattern, fakeParryPattern, chainParryStep, 
+  starCatchPattern, stopCurrentPattern, 
+  playSuccessEffect, playFailEffect 
 } from "../game/patterns/patterns";
 
 type Props = {
@@ -17,118 +14,174 @@ type Props = {
 export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const [frame, setFrame] = useState<string>("");
   const [currentPattern, setCurrentPattern] = useState<string>("");
+  const [patternId, setPatternId] = useState<number>(0); // 연속 패턴 구분을 위한 고유 ID 추가
   const [direction, setDirection] = useState<"LEFT" | "RIGHT">("LEFT");
   
+  const [starPos, setStarPos] = useState(0); 
+  const [bounceCount, setBounceCount] = useState(0);
+  const starDirRef = useRef(1); 
+  const starIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const starRef = useRef<number>(0); 
+
   const chainCountRef = useRef(0);
   const isInputActive = useRef(false);
 
-  // 공통 성공 처리 함수
+  const currentSpeed = Math.max(60, 150 - Math.floor(score / 1000) * 15);
+  const nextPatternDelay = Math.max(150, 400 - Math.floor(score / 1000) * 30);
+
+  const stopStarMovement = useCallback(() => {
+    if (starIntervalRef.current) {
+      clearInterval(starIntervalRef.current);
+      starIntervalRef.current = null;
+    }
+  }, []);
+
   const handlePatternSuccess = useCallback(() => {
     isInputActive.current = false;
-    // 함수형 업데이트로 점수 누락 방지
+    stopStarMovement();
     setScore(prev => prev + 100);
-    // 다음 패턴까지의 여유 시간
-    setTimeout(startNextPattern, 400);
-  }, [setScore]);
+    setTimeout(startNextPattern, nextPatternDelay);
+  }, [setScore, nextPatternDelay, stopStarMovement]);
 
-  // 공통 실패 처리 함수
   const handlePatternFail = useCallback(() => {
     isInputActive.current = false;
     stopCurrentPattern();
+    stopStarMovement();
     playFailEffect(setFrame, onGameOver);
-  }, [onGameOver]);
+  }, [onGameOver, stopStarMovement]);
 
-  const startNextPattern = () => {
+  // 스타캐치 애니메이션 로직 (patternId를 감시하여 강제 재시작)
+  useEffect(() => {
+    if (currentPattern === "starCatch" && isInputActive.current) {
+      stopStarMovement(); // 이전 인터벌 제거
+      
+      // 상태 초기화
+      setStarPos(0);
+      setBounceCount(0);
+      starDirRef.current = 1;
+      starRef.current = 0;
+
+      // 인터벌 생성
+      starIntervalRef.current = setInterval(() => {
+        setStarPos(prev => {
+          const moveSpeed = 3 + (score / 1000);
+          let next = prev + (starDirRef.current * moveSpeed);
+
+          if (next >= 100) {
+            starDirRef.current = -1;
+            next = 100;
+            setBounceCount(b => b + 1);
+          } else if (next <= 0) {
+            starDirRef.current = 1;
+            next = 0;
+            setBounceCount(b => b + 1);
+          }
+          starRef.current = next;
+          return next;
+        });
+      }, 20);
+
+      return () => stopStarMovement();
+    }
+  }, [currentPattern, patternId, score, stopStarMovement]); // patternId가 바뀌면 무조건 재실행
+
+  // 4번 바운스 시 실패
+  useEffect(() => {
+    if (currentPattern === "starCatch" && bounceCount >= 4) {
+      handlePatternFail();
+    }
+  }, [bounceCount, currentPattern, handlePatternFail]);
+
+  const startNextPattern = useCallback(() => {
     stopCurrentPattern();
-    const types = ["parry", "fakeParry", "chainParry"];
+    stopStarMovement();
+    
+    const types = ["parry", "fakeParry", "chainParry", "starCatch"];
     const type = types[Math.floor(Math.random() * types.length)];
     const dir = Math.random() > 0.5 ? "LEFT" : "RIGHT";
 
     setCurrentPattern(type);
+    setPatternId(Date.now()); // 패턴을 뽑을 때마다 고유 ID 부여
     setDirection(dir);
     isInputActive.current = true;
 
-    if (type === "parry") {
-      parryPattern(dir, setFrame, handlePatternFail);
-    } else if (type === "fakeParry") {
-      // 페이크는 끝까지 안 눌러야 성공 -> handlePatternSuccess 실행
-      fakeParryPattern(dir, setFrame, handlePatternSuccess);
-    } else if (type === "chainParry") {
+    if (type === "parry") parryPattern(dir, setFrame, handlePatternFail, currentSpeed);
+    else if (type === "fakeParry") fakeParryPattern(dir, setFrame, handlePatternSuccess, currentSpeed);
+    else if (type === "chainParry") {
       chainCountRef.current = Math.random() > 0.5 ? 2 : 3;
-      chainParryStep(dir, setFrame, handlePatternFail);
+      chainParryStep(dir, setFrame, handlePatternFail, currentSpeed);
     }
-  };
+    else if (type === "starCatch") starCatchPattern(setFrame, 200);
+  }, [currentSpeed, handlePatternFail, handlePatternSuccess, stopStarMovement]);
 
   const handleInput = (clientX: number) => {
     if (!isInputActive.current) return;
 
-    const mid = window.innerWidth / 2;
-    const inputDir = clientX < mid ? "LEFT" : "RIGHT";
+    if (currentPattern === "starCatch") {
+      stopStarMovement();
+      if (starRef.current >= 40 && starRef.current <= 60) {
+        playSuccessEffect(setFrame, handlePatternSuccess, currentSpeed);
+      } else {
+        handlePatternFail();
+      }
+      return;
+    }
 
-    // 1. 페이크 패링 처리
     if (currentPattern === "fakeParry") {
       handlePatternFail();
       return;
     }
 
-    // 2. 패링 및 연속 패링 처리
+    const mid = window.innerWidth / 2;
+    const inputDir = clientX < mid ? "LEFT" : "RIGHT";
+
     if (inputDir === direction) {
       if (currentPattern === "chainParry") {
         chainCountRef.current -= 1;
         if (chainCountRef.current <= 0) {
-          playSuccessEffect(setFrame, handlePatternSuccess);
+          playSuccessEffect(setFrame, handlePatternSuccess, currentSpeed);
         } else {
-          // 연속패링 중간 성공: 다음 단계 재생
           stopCurrentPattern();
           const nextDir = Math.random() > 0.5 ? "LEFT" : "RIGHT";
           setDirection(nextDir);
-          chainParryStep(nextDir, setFrame, handlePatternFail);
+          chainParryStep(nextDir, setFrame, handlePatternFail, currentSpeed);
         }
       } else {
-        // 일반 패링 성공
-        playSuccessEffect(setFrame, handlePatternSuccess);
+        playSuccessEffect(setFrame, handlePatternSuccess, currentSpeed);
       }
     } else {
-      // 방향 틀림
       handlePatternFail();
     }
   };
 
   useEffect(() => {
     startNextPattern();
-    return () => stopCurrentPattern();
+    return () => { stopCurrentPattern(); stopStarMovement(); };
   }, []);
 
   return (
     <div
-      style={{
-        width: "100vw",
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        overflow: "hidden",
-        backgroundColor: "#111",
-        position: "relative"
-      }}
+      style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", backgroundColor: "#111", overflow: "hidden" }}
       onMouseDown={e => handleInput(e.clientX)}
-      onTouchStart={e => handleInput(e.touches[0].clientX)}
     >
-      <img 
-        src={frame} 
-        alt="attack" 
-        style={{ width: 300, userSelect: "none", pointerEvents: "none" }} 
-      />
-      <div style={{ 
-        position: "absolute", 
-        top: 40, 
-        fontSize: "2.5rem", 
-        color: "white", 
-        fontWeight: "bold",
-        textShadow: "2px 2px 4px rgba(0,0,0,0.5)"
-      }}>
-        SCORE: {score}
-      </div>
+      <div style={{ position: "absolute", top: 40, fontSize: "2rem", color: "white", fontWeight: "bold" }}>SCORE: {score}</div>
+      <img src={frame} alt="action" style={{ width: 300, pointerEvents: "none", userSelect: "none" }} />
+
+      {currentPattern === "starCatch" && (
+        <div style={{ marginTop: 20, textAlign: 'center' }}>
+          <div style={{ color: bounceCount >= 3 ? "#ff4d4d" : "white", marginBottom: 5, fontWeight: "bold", fontSize: "1.2rem" }}>
+            LIFE: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}
+          </div>
+          <div style={{ width: "250px", height: "30px", backgroundColor: "#333", border: "2px solid #fff", position: "relative", borderRadius: "15px" }}>
+            <div style={{ position: "absolute", left: "40%", width: "20%", height: "100%", backgroundColor: "yellow", opacity: 0.6 }} />
+            <div style={{ 
+              position: "absolute", left: `${starPos}%`, width: "22px", height: "22px", 
+              backgroundColor: "white", borderRadius: "50%", top: "50%", transform: "translate(-50%, -50%)",
+              boxShadow: "0 0 10px #fff"
+            }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
