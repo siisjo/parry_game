@@ -161,27 +161,104 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
 
   return (
     <div
-      style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", backgroundColor: "#111", overflow: "hidden" }}
+      style={{ 
+        width: "100vw", 
+        height: "100vh", 
+        display: "flex", 
+        flexDirection: "column", 
+        justifyContent: "center", 
+        alignItems: "center", 
+        backgroundColor: "#111", 
+        overflow: "hidden" 
+      }}
       onMouseDown={e => handleInput(e.clientX)}
     >
-      <div style={{ position: "absolute", top: 40, fontSize: "2rem", color: "white", fontWeight: "bold" }}>SCORE: {score}</div>
-      <img src={frame} alt="action" style={{ width: 300, pointerEvents: "none", userSelect: "none" }} />
+      <div style={{ position: "absolute", top: 40, fontSize: "2rem", color: "white", fontWeight: "bold", zIndex: 10 }}>
+        SCORE: {score}
+      </div>
 
-      {currentPattern === "starCatch" && (
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <div style={{ color: bounceCount >= 3 ? "#ff4d4d" : "white", marginBottom: 5, fontWeight: "bold", fontSize: "1.2rem" }}>
-            LIFE: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}
-          </div>
-          <div style={{ width: "250px", height: "30px", backgroundColor: "#333", border: "2px solid #fff", position: "relative", borderRadius: "15px" }}>
-            <div style={{ position: "absolute", left: "40%", width: "20%", height: "100%", backgroundColor: "yellow", opacity: 0.6 }} />
+      {/* 캐릭터 프레임과 UI를 감싸는 컨테이너 */}
+      <div style={{ position: "relative", width: "300px", display: "flex", justifyContent: "center" }}>
+        
+        {/* 캐릭터 이미지 */}
+        <img 
+          src={frame} 
+          alt="action" 
+          style={{ width: "100%", pointerEvents: "none", userSelect: "none" }} 
+        />
+
+        {/* 스타캐치 UI를 이미지 하단에 겹치기 */}
+        {currentPattern === "starCatch" && (
+          <div style={{ 
+            position: "absolute", 
+            bottom: "10%", 
+            left: "50%",
+            transform: "translateX(-50%)",
+            textAlign: 'center',
+            width: "85%", 
+            // --- 배경 박스 스타일 추가 ---
+            backgroundColor: "rgba(0, 0, 0, 0.75)", // 진한 검정 반투명
+            padding: "15px 10px", 
+            borderRadius: "10px", 
+            border: "1px solid rgba(255, 255, 255, 0.2)", // 은은한 테두리
+            boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
+            zIndex: 5
+          }}>
+            {/* LIFE 표시 */}
             <div style={{ 
-              position: "absolute", left: `${starPos}%`, width: "22px", height: "22px", 
-              backgroundColor: "white", borderRadius: "50%", top: "50%", transform: "translate(-50%, -50%)",
-              boxShadow: "0 0 10px #fff"
-            }} />
+              color: bounceCount >= 3 ? "#ff4d4d" : "#ffd700", // 위급할 때 빨강, 평소엔 금색
+              marginBottom: 10, 
+              fontWeight: "bold", 
+              fontSize: "0.9rem",
+              letterSpacing: "1px"
+            }}>
+              STAR CATCH: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}
+            </div>
+            
+            {/* 스타캐치 바 컨테이너 */}
+            <div style={{ 
+              width: "100%", 
+              height: "20px", 
+              backgroundColor: "#222", 
+              border: "1px solid #555", 
+              position: "relative", 
+              borderRadius: "10px",
+              overflow: "hidden" // 영역 밖으로 별이 나가지 않게
+            }}>
+              {/* 성공 영역 (노란색) */}
+              <div style={{ 
+                position: "absolute", 
+                left: "40%", 
+                width: "20%", 
+                height: "100%", 
+                backgroundColor: "rgba(255, 221, 0, 0.5)",
+                boxShadow: "inset 0 0 10px #ffdd00" 
+              }} />
+              
+              {/* 움직이는 별 (포인터) */}
+
+              <div style={{ 
+                position: "absolute", 
+                left: `${starPos}%`, 
+                top: "50%", 
+                transform: "translate(-50%, -50%)",
+                zIndex: 6,
+                // 원(background) 대신 텍스트 스타일 적용
+                fontSize: "24px", // 별 크기
+                color: "#fff",
+                textShadow: "0 0 10px #fff, 0 0 20px #ffdd00", // 별이 반짝이는 느낌
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+                userSelect: "none"
+              }}>
+                ★
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
