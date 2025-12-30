@@ -14,7 +14,7 @@ type Props = {
 export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const [frame, setFrame] = useState<string>("");
   const [currentPattern, setCurrentPattern] = useState<string>("");
-  const [patternId, setPatternId] = useState<number>(0); // 연속 패턴 구분을 위한 고유 ID 추가
+  const [patternId, setPatternId] = useState<number>(0); 
   const [direction, setDirection] = useState<"LEFT" | "RIGHT">("LEFT");
   
   const [starPos, setStarPos] = useState(0); 
@@ -26,8 +26,11 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const chainCountRef = useRef(0);
   const isInputActive = useRef(false);
 
-  const currentSpeed = Math.max(60, 150 - Math.floor(score / 1000) * 15);
-  const nextPatternDelay = Math.max(150, 400 - Math.floor(score / 1000) * 30);
+  // --- [난이도 조절 변수: 50% 완화 버전] ---
+  // 기본 속도 150에서 1000점당 7.5씩 감소 (기존 15)
+  const currentSpeed = Math.max(60, 150 - Math.floor(score / 1000) * 7.5);
+  // 대기 시간 400에서 1000점당 15씩 감소 (기존 30)
+  const nextPatternDelay = Math.max(150, 400 - Math.floor(score / 1000) * 15);
 
   const stopStarMovement = useCallback(() => {
     if (starIntervalRef.current) {
@@ -50,21 +53,19 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     playFailEffect(setFrame, onGameOver);
   }, [onGameOver, stopStarMovement]);
 
-  // 스타캐치 애니메이션 로직 (patternId를 감시하여 강제 재시작)
+  // 스타캐치 애니메이션 로직
   useEffect(() => {
     if (currentPattern === "starCatch" && isInputActive.current) {
-      stopStarMovement(); // 이전 인터벌 제거
-      
-      // 상태 초기화
+      stopStarMovement(); 
       setStarPos(0);
       setBounceCount(0);
       starDirRef.current = 1;
       starRef.current = 0;
 
-      // 인터벌 생성
       starIntervalRef.current = setInterval(() => {
         setStarPos(prev => {
-          const moveSpeed = 3 + (score / 1000);
+          // 공 속도: 1000점당 0.5씩 증가 (기존 1.0)
+          const moveSpeed = 3 + (score / 1000) * 0.5;
           let next = prev + (starDirRef.current * moveSpeed);
 
           if (next >= 100) {
@@ -83,9 +84,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
 
       return () => stopStarMovement();
     }
-  }, [currentPattern, patternId, score, stopStarMovement]); // patternId가 바뀌면 무조건 재실행
+  }, [currentPattern, patternId, score, stopStarMovement]);
 
-  // 4번 바운스 시 실패
   useEffect(() => {
     if (currentPattern === "starCatch" && bounceCount >= 4) {
       handlePatternFail();
@@ -101,7 +101,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     const dir = Math.random() > 0.5 ? "LEFT" : "RIGHT";
 
     setCurrentPattern(type);
-    setPatternId(Date.now()); // 패턴을 뽑을 때마다 고유 ID 부여
+    setPatternId(Date.now()); 
     setDirection(dir);
     isInputActive.current = true;
 
