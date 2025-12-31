@@ -24,8 +24,6 @@ class GameEventLog(Base):
     event_name = Column(String) # pattern_spawn, pattern_success, pattern_fail
     session_id = Column(String, index=True)
     game_index = Column(Integer)
-    user_id = Column(String, default="noname")
-    stage = Column(String)
     pattern_type = Column(String)
     direction = Column(String, nullable=True)
     sequence_order = Column(Integer)

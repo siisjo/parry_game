@@ -9,8 +9,6 @@ class LogCreate(BaseModel):
     event_name: str
     session_id: str
     game_index: int
-    user_id: Optional[str] = "noname"
-    stage: str
     pattern_type: str
     direction: Optional[str] = None
     sequence_order: int
