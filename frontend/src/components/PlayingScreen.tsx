@@ -4,6 +4,7 @@ import {
   starCatchPattern, stopCurrentPattern, 
   playSuccessEffect, playFailEffect 
 } from "../game/patterns/patterns";
+import { soundManager } from "../utils/SoundManager"; // 사운드 매니저 임포트
 
 type Props = {
   score: number;
@@ -26,17 +27,18 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const chainCountRef = useRef(0);
   const isInputActive = useRef(false);
 
-  // --- [난이도 조절 변수: 50% 완화 버전] ---
-  // 기본 속도 150에서 1000점당 7.5씩 감소 (기존 15)
+  // --- [난이도 및 사운드 가속 변수] ---
   const currentSpeed = Math.max(60, 150 - Math.floor(score / 1000) * 7.5);
-  // 대기 시간 400에서 1000점당 15씩 감소 (기존 30)
   const nextPatternDelay = Math.max(150, 400 - Math.floor(score / 1000) * 15);
+  // 점수 10000점당 사운드 속도 10% 증가 (최대 1.5배속 권장)
+  const soundRate = Math.min(1.5, 1 + (score / 10000) * 0.5);
 
   const stopStarMovement = useCallback(() => {
     if (starIntervalRef.current) {
       clearInterval(starIntervalRef.current);
       starIntervalRef.current = null;
     }
+    soundManager.stop("star_move"); // 별 이동 소리 중지
   }, []);
 
   const handlePatternSuccess = useCallback(() => {
@@ -50,6 +52,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     isInputActive.current = false;
     stopCurrentPattern();
     stopStarMovement();
+    soundManager.play("game_over"); // 죽음 사운드 재생
     playFailEffect(setFrame, onGameOver);
   }, [onGameOver, stopStarMovement]);
 
@@ -62,9 +65,11 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       starDirRef.current = 1;
       starRef.current = 0;
 
+      // 별 이동 루프 사운드 시작
+      soundManager.playLoop("star_move", soundRate);
+
       starIntervalRef.current = setInterval(() => {
         setStarPos(prev => {
-          // 공 속도: 1000점당 0.5씩 증가 (기존 1.0)
           const moveSpeed = 3 + (score / 1000) * 0.5;
           let next = prev + (starDirRef.current * moveSpeed);
 
@@ -84,7 +89,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
 
       return () => stopStarMovement();
     }
-  }, [currentPattern, patternId, score, stopStarMovement]);
+  }, [currentPattern, patternId, score, stopStarMovement, soundRate]);
 
   useEffect(() => {
     if (currentPattern === "starCatch" && bounceCount >= 4) {
@@ -105,6 +110,13 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     setDirection(dir);
     isInputActive.current = true;
 
+    // 패턴 전조 사운드 재생
+    if (type === "parry" || type === "chainParry") {
+      soundManager.play("parry_ready", soundRate);
+    } else if (type === "fakeParry") {
+      soundManager.play("fake_ready", soundRate);
+    }
+
     if (type === "parry") parryPattern(dir, setFrame, handlePatternFail, currentSpeed);
     else if (type === "fakeParry") fakeParryPattern(dir, setFrame, handlePatternSuccess, currentSpeed);
     else if (type === "chainParry") {
@@ -112,7 +124,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       chainParryStep(dir, setFrame, handlePatternFail, currentSpeed);
     }
     else if (type === "starCatch") starCatchPattern(setFrame, 200);
-  }, [currentSpeed, handlePatternFail, handlePatternSuccess, stopStarMovement]);
+  }, [currentSpeed, handlePatternFail, handlePatternSuccess, stopStarMovement, soundRate]);
 
   const handleInput = (clientX: number) => {
     if (!isInputActive.current) return;
@@ -120,6 +132,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     if (currentPattern === "starCatch") {
       stopStarMovement();
       if (starRef.current >= 40 && starRef.current <= 60) {
+        soundManager.play("star_success", soundRate); // 스타포스 성공 사운드
         playSuccessEffect(setFrame, handlePatternSuccess, currentSpeed);
       } else {
         handlePatternFail();
@@ -136,6 +149,9 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     const inputDir = clientX < mid ? "LEFT" : "RIGHT";
 
     if (inputDir === direction) {
+      // 패링 클릭 랜덤 사운드 (3종 중 랜덤)
+      soundManager.playParryClick(soundRate);
+
       if (currentPattern === "chainParry") {
         chainCountRef.current -= 1;
         if (chainCountRef.current <= 0) {
@@ -162,14 +178,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   return (
     <div
       style={{ 
-        width: "100vw", 
-        height: "100vh", 
-        display: "flex", 
-        flexDirection: "column", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        backgroundColor: "#111", 
-        overflow: "hidden" 
+        width: "100vw", height: "100vh", display: "flex", flexDirection: "column", 
+        justifyContent: "center", alignItems: "center", backgroundColor: "#111", overflow: "hidden" 
       }}
       onMouseDown={e => handleInput(e.clientX)}
     >
@@ -177,81 +187,34 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
         SCORE: {score}
       </div>
 
-      {/* 캐릭터 프레임과 UI를 감싸는 컨테이너 */}
       <div style={{ position: "relative", width: "300px", display: "flex", justifyContent: "center" }}>
-        
-        {/* 캐릭터 이미지 */}
-        <img 
-          src={frame} 
-          alt="action" 
-          style={{ width: "100%", pointerEvents: "none", userSelect: "none" }} 
-        />
+        <img src={frame} alt="action" style={{ width: "100%", pointerEvents: "none", userSelect: "none" }} />
 
-        {/* 스타캐치 UI를 이미지 하단에 겹치기 */}
         {currentPattern === "starCatch" && (
           <div style={{ 
-            position: "absolute", 
-            bottom: "10%", 
-            left: "50%",
-            transform: "translateX(-50%)",
-            textAlign: 'center',
-            width: "85%", 
-            // --- 배경 박스 스타일 추가 ---
-            backgroundColor: "rgba(0, 0, 0, 0.75)", // 진한 검정 반투명
-            padding: "15px 10px", 
-            borderRadius: "10px", 
-            border: "1px solid rgba(255, 255, 255, 0.2)", // 은은한 테두리
-            boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
-            zIndex: 5
+            position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", 
+            textAlign: 'center', width: "85%", backgroundColor: "rgba(0, 0, 0, 0.75)", 
+            padding: "15px 10px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.2)", zIndex: 5
           }}>
-            {/* LIFE 표시 */}
             <div style={{ 
-              color: bounceCount >= 3 ? "#ff4d4d" : "#ffd700", // 위급할 때 빨강, 평소엔 금색
-              marginBottom: 10, 
-              fontWeight: "bold", 
-              fontSize: "0.9rem",
-              letterSpacing: "1px"
+              color: bounceCount >= 3 ? "#ff4d4d" : "#ffd700", marginBottom: 10, 
+              fontWeight: "bold", fontSize: "0.9rem", letterSpacing: "1px" 
             }}>
               STAR CATCH: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}
             </div>
             
-            {/* 스타캐치 바 컨테이너 */}
             <div style={{ 
-              width: "100%", 
-              height: "20px", 
-              backgroundColor: "#222", 
-              border: "1px solid #555", 
-              position: "relative", 
-              borderRadius: "10px",
-              overflow: "hidden" // 영역 밖으로 별이 나가지 않게
+              width: "100%", height: "20px", backgroundColor: "#222", border: "1px solid #555", 
+              position: "relative", borderRadius: "10px", overflow: "hidden" 
             }}>
-              {/* 성공 영역 (노란색) */}
               <div style={{ 
-                position: "absolute", 
-                left: "40%", 
-                width: "20%", 
-                height: "100%", 
-                backgroundColor: "rgba(255, 221, 0, 0.5)",
-                boxShadow: "inset 0 0 10px #ffdd00" 
+                position: "absolute", left: "40%", width: "20%", height: "100%", 
+                backgroundColor: "rgba(255, 221, 0, 0.5)", boxShadow: "inset 0 0 10px #ffdd00" 
               }} />
               
-              {/* 움직이는 별 (포인터) */}
-
               <div style={{ 
-                position: "absolute", 
-                left: `${starPos}%`, 
-                top: "50%", 
-                transform: "translate(-50%, -50%)",
-                zIndex: 6,
-                // 원(background) 대신 텍스트 스타일 적용
-                fontSize: "24px", // 별 크기
-                color: "#fff",
-                textShadow: "0 0 10px #fff, 0 0 20px #ffdd00", // 별이 반짝이는 느낌
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "none",
-                userSelect: "none"
+                position: "absolute", left: `${starPos}%`, top: "50%", transform: "translate(-50%, -50%)",
+                zIndex: 6, fontSize: "24px", color: "#fff", textShadow: "0 0 10px #fff, 0 0 20px #ffdd00"
               }}>
                 ★
               </div>
