@@ -71,10 +71,48 @@ async def create_log_batch(logs: List[schemas.LogCreate], db: Session = Depends(
 # 랭킹 조회
 @app.get("/api/ranking")
 def get_ranking(db: Session = Depends(get_db)):
-    # 점수 높은 순으로 10개 가져오기
-    # models.Ranking.score (혹은 필드명) 확인 필요
-    ranks = db.query(models.Ranking).order_by(models.Ranking.score.desc()).limit(10).all()
+    # 💡 models.Ranking.score -> models.Ranking.best_score 로 수정
+    ranks = db.query(models.Ranking).order_by(models.Ranking.best_score.desc()).limit(10).all()
     return ranks
+
+# main.py 에 추가 (상단 schemas 확인 필수)
+
+# 랭킹 등록 API
+@app.post("/api/ranking")
+async def register_ranking(rank_data: schemas.RankingCreate, db: Session = Depends(get_db)):
+    try:
+        # 1. 기존 유저 확인 (모델의 nickname 컬럼 사용)
+        existing_user = db.query(models.Ranking).filter(models.Ranking.nickname == rank_data.nickname).first()
+        
+        if existing_user:
+            # 💡 모델의 password_hash 컬럼과 비교
+            if existing_user.password_hash != rank_data.password:
+                raise HTTPException(status_code=401, detail="이미 존재하는 닉네임 또는 비밀번호가 틀립니다.")
+            
+            # 💡 모델의 best_score 컬럼 업데이트
+            if rank_data.score > existing_user.best_score:
+                existing_user.best_score = rank_data.score
+                db.commit()
+                return {"message": "Score updated"}
+            return {"message": "Existing score is higher"}
+        
+        # 2. 신규 등록 (모델의 컬럼명 password_hash, best_score에 맞춰서 대입)
+        new_rank = models.Ranking(
+            session_id=rank_data.session_id,
+            nickname=rank_data.nickname,
+            password_hash=rank_data.password, # 👈 rank_data.password를 password_hash 칸에 넣음
+            best_score=rank_data.score        # 👈 rank_data.score를 best_score 칸에 넣음
+        )
+        db.add(new_rank)
+        db.commit()
+        return {"message": "Rank registered"}
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        db.rollback()
+        print(f"Server Error: {e}") # 터미널에서 에러 확인용
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
