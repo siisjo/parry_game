@@ -1,56 +1,46 @@
-// pages/Game.tsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PlayingScreen from "../components/PlayingScreen";
 
-type GameState = "READY" | "PLAYING" | "GAME_OVER";
+type GameState = "PLAYING" | "GAME_OVER";
 
 export default function Game() {
   const nav = useNavigate();
-  const [state, setState] = useState<GameState>("READY");
+  // 바로 시작하기 위해 초기값을 PLAYING으로 설정
+  const [state, setState] = useState<GameState>("PLAYING");
   const [score, setScore] = useState(0);
 
-  // 게임 시작
   const startGame = () => {
     setScore(0);
     setState("PLAYING");
   };
 
-  // 게임 종료
   const gameOver = () => {
     setState("GAME_OVER");
   };
 
-  // === 화면 분기 ===
-  if (state === "READY") {
-    return (
-      <div style={{ padding: 40 }}>
-        <h2>무한모드</h2>
-        <button onClick={startGame}>시작</button>
-        <br /><br />
-        <button onClick={() => nav("/")}>홈으로</button>
-      </div>
-    );
-  }
-
   if (state === "GAME_OVER") {
     return (
-      <div style={{ padding: 40 }}>
-        <h2>게임 종료</h2>
-        <p>점수: {score}</p>
+      <div style={{ 
+        width: "100vw", height: "100vh", backgroundColor: "#111", color: "white",
+        display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" 
+      }}>
+        <h2 style={{ fontSize: "2.5rem", color: "#ff4d4d" }}>GAME OVER</h2>
+        <p style={{ fontSize: "1.5rem", margin: "20px 0" }}>Final Score: {score}</p>
 
-        <button onClick={() => nav("/ranking")}>
+        <button style={{ width: "200px", padding: "15px", margin: "10px", backgroundColor: "#ffd700", border: "none", borderRadius: "8px", fontWeight: "bold" }} onClick={startGame}>
+          재도전
+        </button>
+        <button style={{ width: "200px", padding: "15px", margin: "10px", backgroundColor: "#333", color: "white", border: "1px solid #555", borderRadius: "8px" }} onClick={() => nav("/ranking")}>
           랭킹 등록
         </button>
-        <br /><br />
-        <button onClick={startGame}>
-          재도전
+        <button style={{ marginTop: "20px", color: "#888", background: "none", border: "none" }} onClick={() => nav("/")}>
+          홈으로
         </button>
       </div>
     );
   }
 
-  // PLAYING
   return (
     <PlayingScreen
       score={score}
