@@ -30,7 +30,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
 
   useEffect(() => { scoreRef.current = score; }, [score]);
 
-  // 💡 Canvas 그리기 함수
+  // Canvas 그리기 함수
   const drawToCanvas = useCallback((img: HTMLImageElement) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -53,6 +53,24 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     soundManager.stop("star_move");
   }, []);
 
+  // 패턴 성공 핸들러 - 여기서 즉시 입력 차단
+  const handlePatternSuccess = useCallback(() => {
+    isInputActive.current = false; // [수정] 성공 즉시 입력 차단
+    stopStarMovement();
+    setScore(prev => prev + 100);
+    setTimeout(startNextPattern, nextPatternDelay);
+  }, [setScore, nextPatternDelay, stopStarMovement]);
+
+  // 패턴 실패 핸들러 - 여기서 즉시 입력 차단
+  const handlePatternFail = useCallback(() => {
+    isInputActive.current = false; // [수정] 실패 즉시 입력 차단
+    stopCurrentPattern();
+    stopStarMovement();
+    soundManager.stopAll();
+    soundManager.play("game_over");
+    playFailEffect(drawToCanvas, onGameOver);
+  }, [onGameOver, stopStarMovement, drawToCanvas]);
+
   const startNextPattern = useCallback(() => {
     stopCurrentPattern();
     stopStarMovement();
@@ -64,6 +82,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     setCurrentPattern(type);
     setPatternId(Date.now()); 
     setDirection(dir);
+    
+    // [수정] 모든 세팅이 완료되고 패턴이 시작될 때만 입력 활성화
     isInputActive.current = true;
 
     if (type === "parry" || type === "chainParry") soundManager.play("parry_ready", soundRate);
@@ -76,23 +96,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       chainParryStep(dir, drawToCanvas, handlePatternFail, currentSpeed);
     }
     else if (type === "starCatch") starCatchPattern(drawToCanvas, 200);
-  }, [currentSpeed, soundRate, stopStarMovement, drawToCanvas]);
-
-  const handlePatternSuccess = useCallback(() => {
-    isInputActive.current = false;
-    stopStarMovement();
-    setScore(prev => prev + 100);
-    setTimeout(startNextPattern, nextPatternDelay);
-  }, [setScore, nextPatternDelay, startNextPattern, stopStarMovement]);
-
-  const handlePatternFail = useCallback(() => {
-    isInputActive.current = false;
-    stopCurrentPattern();
-    stopStarMovement();
-    soundManager.stopAll();
-    soundManager.play("game_over");
-    playFailEffect(drawToCanvas, onGameOver);
-  }, [onGameOver, stopStarMovement, drawToCanvas]);
+  }, [currentSpeed, soundRate, stopStarMovement, drawToCanvas, handlePatternFail, handlePatternSuccess]);
 
   useEffect(() => {
     if (currentPattern === "starCatch" && isInputActive.current) {
@@ -122,16 +126,25 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   }, [bounceCount, currentPattern, handlePatternFail]);
 
   const handleInput = (clientX: number) => {
+    // [수정] 비활성화 상태거나 다음 패턴 대기 중이면 모든 입력 무시
     if (!isInputActive.current) return;
+
     if (currentPattern === "starCatch") {
       stopStarMovement();
       if (starRef.current >= 40 && starRef.current <= 60) {
+        isInputActive.current = false; // 판정 시작 시 즉시 잠금
         soundManager.play("star_success", soundRate);
         playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
-      } else handlePatternFail();
+      } else {
+        handlePatternFail();
+      }
       return;
     }
-    if (currentPattern === "fakeParry") { handlePatternFail(); return; }
+
+    if (currentPattern === "fakeParry") {
+      handlePatternFail();
+      return;
+    }
 
     const mid = window.innerWidth / 2;
     const inputDir = clientX < mid ? "LEFT" : "RIGHT";
@@ -140,15 +153,23 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       soundManager.playParryClick(soundRate);
       if (currentPattern === "chainParry") {
         chainCountRef.current -= 1;
-        if (chainCountRef.current <= 0) playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
-        else {
+        if (chainCountRef.current <= 0) {
+          isInputActive.current = false; // 마지막 타격 성공 시 잠금
+          playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
+        } else {
+          // 연속 패링 중에는 중복 입력을 막기 위해 짧게 중단 후 다시 패턴 호출
           stopCurrentPattern();
           const nextDir = Math.random() > 0.5 ? "LEFT" : "RIGHT";
           setDirection(nextDir);
           chainParryStep(nextDir, drawToCanvas, handlePatternFail, currentSpeed);
         }
-      } else playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
-    } else handlePatternFail();
+      } else {
+        isInputActive.current = false; // 일반 패링 성공 시 즉시 잠금
+        playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
+      }
+    } else {
+      handlePatternFail();
+    }
   };
 
   useEffect(() => {
@@ -166,7 +187,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       </div>
 
       <div style={{ position: "relative", width: "300px", height: "300px", display: "flex", justifyContent: "center" }}>
-        {/* 💡 <img> 대신 <canvas> 사용 */}
         <canvas 
           ref={canvasRef} 
           width={300} 
