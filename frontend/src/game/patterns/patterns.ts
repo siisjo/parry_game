@@ -1,66 +1,63 @@
 import { frames } from "../../assets/frame";
 
 type Direction = "LEFT" | "RIGHT";
-
-let currentTimer: ReturnType<typeof setTimeout> | null = null;
+let activeTimers: ReturnType<typeof setTimeout>[] = [];
 
 export const stopCurrentPattern = () => {
-  if (currentTimer) {
-    clearTimeout(currentTimer);
-    currentTimer = null;
-  }
+  activeTimers.forEach(clearTimeout);
+  activeTimers = [];
 };
 
-// 프레임 재생 공통 함수
-const playFrameSequence = (sequence: string[], setFrame: (src: string) => void, onComplete: () => void, frameDelay: number) => {
+const safeSetTimeout = (callback: () => void, delay: number) => {
+  const timer = setTimeout(() => {
+    activeTimers = activeTimers.filter(t => t !== timer);
+    callback();
+  }, delay);
+  activeTimers.push(timer);
+};
+
+const playFrameSequence = (sequence: HTMLImageElement[], draw: (img: HTMLImageElement) => void, onComplete: () => void, frameDelay: number) => {
   let index = 0;
   const playNext = () => {
     if (index < sequence.length) {
-      setFrame(sequence[index]);
+      draw(sequence[index]);
       index++;
-      currentTimer = setTimeout(playNext, frameDelay);
+      safeSetTimeout(playNext, frameDelay);
     } else {
-      currentTimer = null;
       onComplete();
     }
   };
   playNext();
 };
 
-// 무한 반복 프레임 (스타캐치용)
-const playLoopSequence = (sequence: string[], setFrame: (src: string) => void, frameDelay: number) => {
+const playLoopSequence = (sequence: HTMLImageElement[], draw: (img: HTMLImageElement) => void, frameDelay: number) => {
   let index = 0;
   const playNext = () => {
-    setFrame(sequence[index]);
+    draw(sequence[index]);
     index = (index + 1) % sequence.length;
-    currentTimer = setTimeout(playNext, frameDelay);
+    safeSetTimeout(playNext, frameDelay);
   };
   playNext();
 };
 
-export const playSuccessEffect = (setFrame: any, onComplete: any, speed: number) => {
+export const playSuccessEffect = (draw: any, onComplete: any, speed: number) => {
   stopCurrentPattern();
-  playFrameSequence(frames.parry.success, setFrame, onComplete, Math.max(50, speed * 0.5));
+  playFrameSequence(frames.parry.success, draw, onComplete, Math.max(50, speed * 0.5));
 };
 
-export const playFailEffect = (setFrame: any, onComplete: any) => {
+export const playFailEffect = (draw: any, onComplete: any) => {
   stopCurrentPattern();
-  playFrameSequence(frames.parry.fail, setFrame, onComplete, 150);
+  playFrameSequence(frames.parry.fail, draw, onComplete, 150);
 };
 
-// 패턴 함수들
-export const parryPattern = (dir: Direction, setFrame: any, onFail: any, speed: number) => 
-  playFrameSequence(frames.parry.pre[dir], setFrame, onFail, speed);
+export const parryPattern = (dir: Direction, draw: any, onFail: any, speed: number) => 
+  playFrameSequence(frames.parry.pre[dir], draw, onFail, speed);
 
-export const fakeParryPattern = (dir: Direction, setFrame: any, onSuccess: any, speed: number) => 
-  playFrameSequence(frames.fakeParry.pre[dir], setFrame, onSuccess, speed);
+export const fakeParryPattern = (dir: Direction, draw: any, onSuccess: any, speed: number) => 
+  playFrameSequence(frames.fakeParry.pre[dir], draw, onSuccess, speed);
 
-export const chainParryStep = (dir: Direction, setFrame: any, onFail: any, speed: number) => 
-  playFrameSequence(frames.chainParry.pre[dir], setFrame, onFail, speed);
+export const chainParryStep = (dir: Direction, draw: any, onFail: any, speed: number) => 
+  playFrameSequence(frames.chainParry.pre[dir], draw, onFail, speed);
 
-// 스타캐치 전용 프레임 재생
-export const starCatchPattern = (setFrame: any, speed: number) => {
-  // starforce_1, starforce_2 이미지가 frames에 정의되어 있어야 함
-  const starFrames = (frames as any).starforce || []; 
-  playLoopSequence(starFrames, setFrame, speed);
-};
+export const starCatchPattern = (draw: any, speed: number) => 
+  playLoopSequence(frames.starforce, draw, speed);

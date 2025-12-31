@@ -1,6 +1,3 @@
-// src/utils/SoundManager.ts
-
-// 1. 모든 사운드 파일을 직접 import 합니다.
 import starSuccess from '../assets/sound/star_success.mp3';
 import starMove from '../assets/sound/star_move.mp3';
 import parryClick1 from '../assets/sound/parry_click1.mp3';
@@ -12,9 +9,9 @@ import fakeReady from '../assets/sound/fake_ready.mp3';
 
 class SoundManager {
   private sounds: { [key: string]: HTMLAudioElement } = {};
+  private activeLoops: Set<string> = new Set();
 
   constructor() {
-    // 2. import한 변수(실제 경로)를 사용하여 Audio 객체 생성
     const soundMap: { [key: string]: string } = {
       star_success: starSuccess,
       star_move: starMove,
@@ -28,10 +25,10 @@ class SoundManager {
 
     Object.entries(soundMap).forEach(([name, path]) => {
       this.sounds[name] = new Audio(path);
+      this.sounds[name].preload = "auto";
     });
   }
 
-  // ... 나머지 play, stop 등의 함수는 이전과 동일 ...
   play(name: string, playbackRate: number = 1.0) {
     const sound = this.sounds[name];
     if (sound) {
@@ -52,6 +49,7 @@ class SoundManager {
     if (sound) {
       sound.loop = true;
       sound.playbackRate = playbackRate;
+      this.activeLoops.add(name);
       sound.play().catch(() => {});
     }
   }
@@ -61,7 +59,16 @@ class SoundManager {
     if (sound) {
       sound.pause();
       sound.currentTime = 0;
+      this.activeLoops.delete(name);
     }
+  }
+
+  stopAll() {
+    Object.values(this.sounds).forEach(s => {
+      s.pause();
+      s.currentTime = 0;
+    });
+    this.activeLoops.clear();
   }
 }
 
