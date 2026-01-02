@@ -19,6 +19,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const [patternId, setPatternId] = useState<number>(0); 
   const [direction, setDirection] = useState<"LEFT" | "RIGHT">("LEFT");
   
+  const [targetPos, setTargetPos] = useState(40); 
   const [starPos, setStarPos] = useState(0); 
   const [bounceCount, setBounceCount] = useState(0);
 
@@ -36,7 +37,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
 
   useEffect(() => { scoreRef.current = score; }, [score]);
 
-  // 💡 드로잉 안정성 확보
   const drawToCanvas = useCallback((img: HTMLImageElement) => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext("2d");
@@ -58,7 +58,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   }, []);
 
   const startNextPattern = useCallback(() => {
-    // 1. 이전 패턴과 타이머 완전히 정지
     stopCurrentPattern();
     stopStarMovement();
     
@@ -66,17 +65,14 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     const type = types[Math.floor(Math.random() * types.length)];
     const dir = Math.random() > 0.5 ? "LEFT" : "RIGHT";
 
-    // 2. Ref 데이터 갱신
     currentPatternRef.current = type;
     sequenceOrderRef.current += 1;
     patternStartTimeRef.current = performance.now();
 
-    // 3. 상태 업데이트
     setCurrentPattern(type);
     setPatternId(Date.now()); 
     setDirection(dir);
     
-    // 4. 로그 전송
     sendLog("pattern_spawn", {
       pattern_type: type,
       direction: dir.toLowerCase(),
@@ -89,7 +85,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     if (type === "parry" || type === "chainParry") soundManager.play("parry_ready", soundRate);
     else if (type === "fakeParry") soundManager.play("fake_ready", soundRate);
 
-    // 5. 애니메이션 시작 (약간의 비동기 여유를 줌)
     setTimeout(() => {
       if (type === "parry") parryPattern(dir, drawToCanvas, () => handlePatternFail("timeout"), currentSpeed);
       else if (type === "fakeParry") fakeParryPattern(dir, drawToCanvas, handlePatternSuccess, currentSpeed);
@@ -143,10 +138,14 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       stopStarMovement(); 
       setStarPos(0); setBounceCount(0);
       starDirRef.current = 1; starRef.current = 0;
+
+      const randomPos = Math.floor(Math.random() * 81); 
+      setTargetPos(randomPos);
+
       soundManager.playLoop("star_move", soundRate);
       starIntervalRef.current = setInterval(() => {
         setStarPos(prev => {
-          const moveSpeed = 3 + (scoreRef.current / 1000) * 0.5;
+          const moveSpeed = 3 + (scoreRef.current / 2000) * 0.5;
           let next = prev + (starDirRef.current * moveSpeed);
           if (next >= 100 || next <= 0) {
             starDirRef.current *= -1;
@@ -168,7 +167,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     if (!isInputActive.current) return;
     if (currentPattern === "starCatch") {
       stopStarMovement();
-      if (starRef.current >= 40 && starRef.current <= 60) {
+      if (starRef.current >= targetPos && starRef.current <= targetPos + 20) {
         isInputActive.current = false;
         soundManager.play("star_success", soundRate);
         playSuccessEffect(drawToCanvas, handlePatternSuccess, currentSpeed);
@@ -224,13 +223,13 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", backgroundColor: "#111", overflow: "hidden" }} onMouseDown={e => handleInput(e.clientX)}>
       <div style={{ position: "absolute", top: 40, fontSize: "2rem", color: "white", fontWeight: "bold", zIndex: 10 }}>SCORE: {score}</div>
-      <div style={{ position: "relative", width: "300px", height: "300px", display: "flex", justifyContent: "center" }}>
-        <canvas ref={canvasRef} width={300} height={300} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      <div style={{ position: "relative", width: "500px", height: "500px", display: "flex", justifyContent: "center" }}>
+        <canvas ref={canvasRef} width={500} height={500} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         {currentPattern === "starCatch" && (
           <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", textAlign: 'center', width: "85%", backgroundColor: "rgba(0, 0, 0, 0.75)", padding: "15px 10px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.2)", zIndex: 5 }}>
             <div style={{ color: bounceCount >= 3 ? "#ff4d4d" : "#ffd700", marginBottom: 10, fontWeight: "bold", fontSize: "0.9rem", letterSpacing: "1px" }}>STAR CATCH: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}</div>
             <div style={{ width: "100%", height: "20px", backgroundColor: "#222", border: "1px solid #555", position: "relative", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ position: "absolute", left: "40%", width: "20%", height: "100%", backgroundColor: "rgba(255, 221, 0, 0.5)", boxShadow: "inset 0 0 10px #ffdd00" }} />
+              <div style={{ position: "absolute", left: `${targetPos}%`, width: "20%", height: "100%", backgroundColor: "rgba(255, 221, 0, 0.5)", boxShadow: "inset 0 0 10px #ffdd00" }} />
               <div style={{ position: "absolute", left: `${starPos}%`, top: "50%", transform: "translate(-50%, -50%)", zIndex: 6, fontSize: "24px", color: "#fff", textShadow: "0 0 10px #fff, 0 0 20px #ffdd00" }}>★</div>
             </div>
           </div>
