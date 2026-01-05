@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9L0JDLBFGF"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        // logger.ts에서 생성한 세션 ID를 가져옵니다.
+        // 키값('game_persistent_session_id')은 logger.ts와 반드시 일치해야 합니다.
+        const sessionId = localStorage.getItem('game_persistent_session_id');
+
+        // [수정된 부분] config 설정 시 session_id를 함께 보냅니다.
+        gtag('config', 'G-9L0JDLBFGF', {
+          'game_session_id': sessionId, 
+          'user_id': sessionId
+        });
+      </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
