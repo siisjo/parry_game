@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import PlayingScreen from "../components/PlayingScreen";
 
 type GameState = "PLAYING" | "GAME_OVER";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function Game() {
   const nav = useNavigate();
@@ -42,7 +43,7 @@ export default function Game() {
     const currentSessionId = `session_${localStorage.getItem('current_game_index') || '1'}`;
 
     try {
-      const response = await fetch("http://localhost:8000/api/ranking", {
+      const response = await fetch(`${API_BASE_URL}/api/ranking`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

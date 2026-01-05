@@ -3,6 +3,7 @@
 let logQueue: any[] = [];
 const BATCH_SIZE = 20; // 20개가 쌓이면 전송
 const FLUSH_INTERVAL = 5000; // 혹은 5초마다 전송
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * 💡 고유 세션 ID 관리 (30일 유지)
@@ -49,7 +50,7 @@ const flushLogs = async () => {
   logQueue = []; // 큐 비우기
 
   try {
-    await fetch('http://localhost:8000/api/logs/batch', {
+    await fetch(`${API_BASE_URL}/api/logs/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(logsToSend),

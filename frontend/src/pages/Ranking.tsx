@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // 데이터 타입 정의
 interface RankEntry {
@@ -16,7 +17,7 @@ export default function Ranking() {
     // 💡 백엔드에서 랭킹 데이터 가져오기
     const fetchRankings = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/ranking");
+        const response = await fetch(`${API_BASE_URL}/api/ranking`);
         if (response.ok) {
           const data = await response.json();
           setRankList(data);
