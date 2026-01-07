@@ -223,8 +223,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", backgroundColor: "#111", overflow: "hidden" }} onMouseDown={e => handleInput(e.clientX)}>
       <div style={{ position: "absolute", top: 40, fontSize: "2rem", color: "white", fontWeight: "bold", zIndex: 10 }}>SCORE: {score}</div>
-      <div style={{ position: "relative", width: "500px", height: "500px", display: "flex", justifyContent: "center" }}>
-        <canvas ref={canvasRef} width={500} height={500} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      <div style={{ position: "relative", width: "400px", height: "400px", display: "flex", justifyContent: "center" }}>
+        <canvas ref={canvasRef} width={400} height={400} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         {currentPattern === "starCatch" && (
           <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", textAlign: 'center', width: "85%", backgroundColor: "rgba(0, 0, 0, 0.75)", padding: "15px 10px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.2)", zIndex: 5 }}>
             <div style={{ color: bounceCount >= 3 ? "#ff4d4d" : "#ffd700", marginBottom: 10, fontWeight: "bold", fontSize: "0.9rem", letterSpacing: "1px" }}>STAR CATCH: {"★".repeat(Math.max(0, 4 - bounceCount))}{"☆".repeat(Math.min(4, bounceCount))}</div>
