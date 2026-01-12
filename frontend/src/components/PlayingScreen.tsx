@@ -35,6 +35,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const sequenceOrderRef = useRef(0);
   const patternStartTimeRef = useRef(0);
 
+  const LOG_SOURCE = "client_web";
+
   useEffect(() => { scoreRef.current = score; }, [score]);
 
   const drawToCanvas = useCallback((img: HTMLImageElement) => {
@@ -74,6 +76,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     setDirection(dir);
     
     sendLog("pattern_spawn", {
+      event_id: crypto.randomUUID(),
+      source: LOG_SOURCE,
       pattern_type: type,
       direction: dir.toLowerCase(),
       sequence_order: sequenceOrderRef.current,
@@ -99,6 +103,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const handlePatternSuccess = useCallback(() => {
     const reactionTime = Math.floor(performance.now() - patternStartTimeRef.current);
     sendLog("pattern_success", {
+      event_id: crypto.randomUUID(),
+      source: LOG_SOURCE,
       pattern_type: currentPatternRef.current,
       direction: direction.toLowerCase(),
       sequence_order: sequenceOrderRef.current,
@@ -115,6 +121,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const handlePatternFail = useCallback((reason: string = "wrong_input") => {
     const reactionTime = Math.floor(performance.now() - patternStartTimeRef.current);
     sendLog("pattern_fail", {
+      event_id: crypto.randomUUID(),
+      source: LOG_SOURCE,
       pattern_type: currentPatternRef.current,
       direction: direction.toLowerCase(),
       sequence_order: sequenceOrderRef.current,
