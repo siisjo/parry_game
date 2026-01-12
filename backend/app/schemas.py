@@ -5,6 +5,8 @@ from typing import Optional
 
 # 이벤트 로그 수신용
 class LogCreate(BaseModel):
+    event_id: str               
+    source: str
     event_time: datetime
     event_name: str
     session_id: str
