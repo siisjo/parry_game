@@ -76,7 +76,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     setDirection(dir);
     
     sendLog("pattern_spawn", {
-      event_id: crypto.randomUUID(),
       source: LOG_SOURCE,
       pattern_type: type,
       direction: dir.toLowerCase(),
@@ -103,7 +102,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const handlePatternSuccess = useCallback(() => {
     const reactionTime = Math.floor(performance.now() - patternStartTimeRef.current);
     sendLog("pattern_success", {
-      event_id: crypto.randomUUID(),
       source: LOG_SOURCE,
       pattern_type: currentPatternRef.current,
       direction: direction.toLowerCase(),
@@ -121,7 +119,6 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const handlePatternFail = useCallback((reason: string = "wrong_input") => {
     const reactionTime = Math.floor(performance.now() - patternStartTimeRef.current);
     sendLog("pattern_fail", {
-      event_id: crypto.randomUUID(),
       source: LOG_SOURCE,
       pattern_type: currentPatternRef.current,
       direction: direction.toLowerCase(),

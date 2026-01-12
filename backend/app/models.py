@@ -20,7 +20,6 @@ class GameEventLog(Base):
     __tablename__ = "game_event_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(String, unique=True, index=True)
     source = Column(String, index=True)
     event_time = Column(DateTime, index=True) # 분석용 인덱스
     event_name = Column(String) # pattern_spawn, pattern_success, pattern_fail

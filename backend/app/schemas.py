@@ -4,9 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 # 이벤트 로그 수신용
-class LogCreate(BaseModel):
-    event_id: str               
-    source: str
+class LogCreate(BaseModel):     
     event_time: datetime
     event_name: str
     session_id: str
@@ -19,6 +17,7 @@ class LogCreate(BaseModel):
     fail_reason: Optional[str] = None
     score: Optional[int] = None
     star_speed: Optional[float] = None
+    source: str
 
 # 랭킹 등록용
 class RankingCreate(BaseModel):
