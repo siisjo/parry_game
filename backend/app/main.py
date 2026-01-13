@@ -34,19 +34,30 @@ def get_db():
 def read_root():
     return {"message": "Server is running!"}
 
-# --- 로그 관련 API ---
+# --- 로그 관련 API 수정 ---
 
 @app.post("/api/logs/batch")
 async def create_log_batch(logs: List[schemas.LogCreate], db: Session = Depends(get_db)):
     try:
-        db_logs = [models.GameEventLog(**log.dict()) for log in logs]
-        db.add_all(db_logs)
+        if not logs:
+            return {"status": "success", "detail": "No logs to save"}
+
+        # 1. 데이터를 딕셔너리 리스트로 변환 (속도 향상을 위해)
+        db_logs_data = [log.dict() for log in logs]
+        
+        # 2. bulk_insert_mappings 사용 (성능이 훨씬 좋고 메모리를 적게 먹음)
+        # 만약 모델명이 GameEventLog가 맞다면 아래처럼 사용하세요.
+        db.bulk_insert_mappings(models.GameEventLog, db_logs_data)
+        
         db.commit()
-        return {"status": "success", "detail": f"Saved {len(db_logs)} logs"}
+        return {"status": "success", "detail": f"Saved {len(logs)} logs"}
+        
     except Exception as e:
         db.rollback()
-        print(f"Batch Insert Error: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        # 터미널에 정확히 어떤 에리인지 찍어줍니다.
+        print(f"Batch Insert Error: {str(e)}") 
+        # 디버깅을 위해 에러 메시지를 detail에 포함 (개발 중에만)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- 랭킹 관련 API ---
 
