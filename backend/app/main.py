@@ -16,7 +16,10 @@ app = FastAPI(title="Parry Game API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://parry-game-ten.vercel.app",
-    "http://localhost:5173",], 
+    "http://localhost:5173",
+    "https://parrygame.xyz",
+    "https://www.parrygame.xyz"
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
