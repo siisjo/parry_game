@@ -20,6 +20,22 @@ export default function Home() {
 
   return (
     <div style={containerStyle}>
+      <h1
+        style={{
+          position: "absolute",
+          width: "1px",
+          height: "1px",
+          padding: 0,
+          margin: "-1px",
+          overflow: "hidden",
+          clip: "rect(0, 0, 0, 0)",
+          whiteSpace: "nowrap",
+          border: 0,
+          color: "#000" // 검정색 (요청대로)
+        }}
+      >
+        패링게임 반응속도 테스트
+      </h1>
       <h1 style={{ fontSize: "3rem", marginBottom: "40px", color: "#ffd700", textShadow: "0 0 10px rgba(255,215,0,0.3)" }}>Parry Game</h1>
 
       <button style={{ ...btnStyle, backgroundColor: "#ffd700", color: "#000" }} onClick={() => nav("/game")}>
