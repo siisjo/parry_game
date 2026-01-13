@@ -3,6 +3,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PlayingScreen from "../components/PlayingScreen";
 
+declare global {
+  interface Window {
+    gtag: (command: string, action: string, params?: object) => void;
+  }
+}
+
 type GameState = "PLAYING" | "GAME_OVER";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -15,31 +21,62 @@ export default function Game() {
   const [showRankModal, setShowRankModal] = useState(false);
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState(""); // 💡 에러 메시지 상태 추가
+  const [errorMsg, setErrorMsg] = useState("");
 
   const startGame = () => {
     setScore(0);
     setState("PLAYING");
     setShowRankModal(false);
-    setErrorMsg(""); // 초기화
+    setErrorMsg("");
     setNickname("");
     setPassword("");
   };
 
   const gameOver = () => {
     setState("GAME_OVER");
-    setShowRankModal(true); // 종료 시 모달 띄우기
+    setShowRankModal(true); 
+  };
+
+  // ✨ 공유하기 로직 (Referral 지표 수집용 UTM 포함)
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Parry Game',
+      text: `[Parry Game] 내 점수는 ${score}점! 이 속도를 버틸 수 있겠어? 🔥`,
+      url: `https://parrygame.xyz/?utm_source=share&utm_medium=game_over&utm_campaign=score_${score}`,
+    };
+
+    // ✨ GA4 이벤트 전송
+    if (window.gtag) {
+      window.gtag('event', 'share_click', {
+        'score': score,
+        // navigator.share가 함수로 존재하는지 확실히 체크
+        'method': typeof navigator.share === 'function' ? 'system_share' : 'copy_link'
+      });
+    }
+
+    try {
+      // ✨ 수정된 조건문: typeof를 사용하여 실행 가능한 함수인지 확인
+      if (typeof navigator.share === 'function') {
+        await navigator.share(shareData);
+      } else {
+        // PC 등 지원하지 않는 환경: 클립보드 복사
+        await navigator.clipboard.writeText(`${shareData.text}\n플레이하기: ${shareData.url}`);
+        alert("점수와 게임 링크가 클립보드에 복사되었습니다! 📢");
+      }
+    } catch (error) {
+      // 유저가 공유 취소를 누른 경우 등 예외 처리
+      console.error("공유 실패 또는 취소됨:", error);
+    }
   };
 
   const handleRankSubmit = async () => {
-    setErrorMsg(""); // 시도할 때마다 이전 에러 초기화
+    setErrorMsg("");
 
     if (!nickname || !password) {
       setErrorMsg("닉네임과 비밀번호를 모두 입력해주세요.");
       return;
     }
 
-    // 💡 세션 ID 가져오기 (schemas.py의 필수값 대응)
     const currentSessionId = `session_${localStorage.getItem('current_game_index') || '1'}`;
 
     try {
@@ -60,8 +97,6 @@ export default function Game() {
         nav("/ranking");
       } else {
         const errData = await response.json();
-        // 💡 백엔드의 HTTPException(detail="...") 메시지를 화면에 표시
-        // 예: "이미 존재하는 닉네임입니다. 비밀번호를 확인해주세요."
         setErrorMsg(errData.detail || "등록 중 오류가 발생했습니다.");
       }
     } catch (error) {
@@ -76,10 +111,20 @@ export default function Game() {
         <PlayingScreen score={score} setScore={setScore} onGameOver={gameOver} />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", color: "white" }}>
-          <h2 style={{ fontSize: "3rem", color: "#ff4d4d" }}>GAME OVER</h2>
-          <p style={{ fontSize: "1.5rem" }}>최종 점수: {score}</p>
+          <h2 style={{ fontSize: "3.5rem", color: "#ff4d4d", marginBottom: "5px", textShadow: "0 0 20px rgba(255, 77, 77, 0.5)" }}>GAME OVER</h2>
+          <p style={{ fontSize: "1.8rem", marginBottom: "30px", fontWeight: "bold" }}>최종 점수: {score}</p>
+          
+          {/* 주요 버튼 영역 */}
           <button style={btnStyle} onClick={startGame}>다시 시작</button>
-          <button style={{ ...btnStyle, backgroundColor: "#333" }} onClick={() => nav("/")}>홈으로</button>
+          
+          <button 
+            style={{ ...btnStyle, backgroundColor: "transparent", border: "2px solid #ffd700", color: "#ffd700" }} 
+            onClick={handleShare}
+          >
+            📢 친구에게 공유하기
+          </button>
+
+          <button style={{ ...btnStyle, backgroundColor: "#333", color: "white" }} onClick={() => nav("/")}>홈으로</button>
         </div>
       )}
 
@@ -87,20 +132,12 @@ export default function Game() {
       {showRankModal && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <h3 style={{ color: "#ffd700", marginBottom: "15px" }}>랭킹 등록</h3>
+            <h3 style={{ color: "#ffd700", marginBottom: "15px", fontSize: "1.5rem" }}>랭킹 등록</h3>
             
-            {/* 💡 에러 메시지 표시 영역 */}
             {errorMsg && (
               <div style={{ 
-                width: "100%", 
-                backgroundColor: "rgba(255, 77, 77, 0.1)", 
-                border: "1px solid #ff4d4d", 
-                borderRadius: "5px", 
-                padding: "10px", 
-                marginBottom: "15px",
-                color: "#ff4d4d",
-                fontSize: "0.85rem",
-                textAlign: "center"
+                width: "100%", backgroundColor: "rgba(255, 77, 77, 0.1)", border: "1px solid #ff4d4d", 
+                borderRadius: "5px", padding: "10px", marginBottom: "15px", color: "#ff4d4d", fontSize: "0.85rem", textAlign: "center"
               }}>
                 ⚠️ {errorMsg}
               </div>
@@ -135,8 +172,9 @@ export default function Game() {
 
 // 스타일들
 const btnStyle: React.CSSProperties = {
-  width: "200px", padding: "15px", margin: "10px", backgroundColor: "#ffd700", 
-  border: "none", borderRadius: "8px", fontWeight: "bold", cursor: "pointer"
+  width: "220px", padding: "15px", margin: "8px", backgroundColor: "#ffd700", 
+  border: "none", borderRadius: "10px", fontWeight: "bold", fontSize: "1.1rem", cursor: "pointer",
+  transition: "transform 0.1s"
 };
 
 const modalOverlayStyle: React.CSSProperties = {
