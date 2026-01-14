@@ -21,6 +21,15 @@ const getOrCreateSessionId = (): string => {
 };
 
 const persistentSessionId = getOrCreateSessionId();
+
+// ★ 추가: GA4에 커스텀 세션 ID 설정
+if (typeof window !== 'undefined' && (window as any).gtag) {
+  (window as any).gtag('config', 'GA_MEASUREMENT_ID', { // 본인의 GA 측정 ID로 교체
+    'user_id': persistentSessionId,           // GA 기본 유저 식별자로 활용
+    'game_session_id': persistentSessionId    // 커스텀 파라미터로 활용
+  });
+}
+
 let gameIndex = parseInt(localStorage.getItem('current_game_index') || '1');
 
 export const incrementGameIndex = () => {
