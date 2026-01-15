@@ -69,7 +69,7 @@ export default function Home() {
             <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
               📢 EVENT: 랭킹 1위를 달성하시면 소정의 선물을 드려요
               <span style={{ fontSize: "0.8rem", fontWeight: "normal", marginLeft: "8px" }}>
-                (~1/20 11:59 기준)
+                (~1/23 11:59 기준)
               </span>
             </div>
 
@@ -95,7 +95,19 @@ export default function Home() {
           </div>
           <button 
             onClick={() => setShowEvent(false)}
-            style={{ backgroundColor: "transparent", border: "none", color: "#ffd700", cursor: "pointer", fontSize: "1.2rem" }}
+            style={{ 
+              backgroundColor: "transparent", 
+              border: "none", 
+              color: "#ffd700", 
+              cursor: "pointer", 
+              fontSize: "1rem",      // 1.2rem -> 1rem으로 축소
+              padding: "0 4px",      // 클릭하기 편하게 좌우 여백 살짝 추가
+              lineHeight: "1",       // 버튼 높이가 튀지 않게 조정
+              opacity: "0.8",        // 살짝 투명하게 해서 텍스트보다 덜 튀게 함
+              transition: "opacity 0.2s" 
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = "0.8"}
           >
             ×
           </button>

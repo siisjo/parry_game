@@ -3,30 +3,34 @@
 let logQueue: any[] = [];
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const getOrCreateSessionId = (): string => {
+/**
+ * index.html에서 생성한 세션 ID를 가져옵니다.
+ * 만약의 상황(index.html 로직 누락 등)을 대비해 fallback 로직은 유지합니다.
+ */
+const getPersistentSessionId = (): string => {
   const SESSION_KEY = 'game_persistent_session_id';
-  const EXPIRY_KEY = 'game_session_expiry';
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-  const now = new Date().getTime();
   const storedId = localStorage.getItem(SESSION_KEY);
-  const expiry = localStorage.getItem(EXPIRY_KEY);
-
-  if (!storedId || !expiry || now > parseInt(expiry)) {
-    const newId = crypto.randomUUID();
-    localStorage.setItem(SESSION_KEY, newId);
-    localStorage.setItem(EXPIRY_KEY, (now + THIRTY_DAYS_MS).toString());
-    return newId;
+  
+  if (storedId) {
+    return storedId;
   }
-  return storedId;
+
+  // index.html에서 생성이 안 되었을 경우를 대비한 최소한의 방어 로직
+  const newId = crypto.randomUUID();
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  localStorage.setItem(SESSION_KEY, newId);
+  localStorage.setItem('game_session_expiry', (new Date().getTime() + THIRTY_DAYS_MS).toString());
+  return newId;
 };
 
-const persistentSessionId = getOrCreateSessionId();
+const persistentSessionId = getPersistentSessionId();
 
-// ★ 추가: GA4에 커스텀 세션 ID 설정
+// ★ 수정: GA4 중복 config 제거 및 'set'으로 ID 동기화 보강
 if (typeof window !== 'undefined' && (window as any).gtag) {
-  (window as any).gtag('config', 'GA_MEASUREMENT_ID', { // 본인의 GA 측정 ID로 교체
-    'user_id': persistentSessionId,           // GA 기본 유저 식별자로 활용
-    'game_session_id': persistentSessionId    // 커스텀 파라미터로 활용
+  // 이미 index.html에서 실행되었겠지만, 다시 한번 ID를 확정해줍니다.
+  (window as any).gtag('set', {
+    'user_id': persistentSessionId,
+    'game_session_id': persistentSessionId
   });
 }
 
@@ -42,7 +46,7 @@ export const flushLogs = async () => {
   if (logQueue.length === 0) return;
 
   const logsToSend = [...logQueue];
-  logQueue = []; // 전송 시작과 동시에 큐를 비워 메모리 확보
+  logQueue = [];
 
   try {
     await fetch(`${API_BASE_URL}/api/logs/batch`, {
@@ -53,7 +57,6 @@ export const flushLogs = async () => {
     console.log(`[Logger] ${logsToSend.length}개 로그 전송 완료 및 클리어.`);
   } catch (e) {
     console.error("Batch log failed", e);
-    // 실패 시에만 다시 큐에 넣어 다음 게임 종료 시 재시도
     logQueue = [...logsToSend, ...logQueue];
   }
 };
@@ -63,12 +66,11 @@ export const sendLog = (eventName: string, payload: any) => {
   const logData = {
     event_time: new Date().toISOString(),
     event_name: eventName,
-    session_id: persistentSessionId,
+    session_id: persistentSessionId, // 여기서 사용되는 ID가 GA4와 동일한 UUID임
     game_index: gameIndex,
     ...payload
   };
   logQueue.push(logData);
 };
 
-// 게임 오버 시 호출할 함수
 export const forceFlush = () => flushLogs();
