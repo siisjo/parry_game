@@ -69,7 +69,7 @@ export default function Home() {
             <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
               📢 EVENT: 랭킹 1위를 달성하시면 소정의 선물을 드려요
               <span style={{ fontSize: "0.8rem", fontWeight: "normal", marginLeft: "8px" }}>
-                (~1/23 11:59 기준)
+                (~1/18 11:59 기준)
               </span>
             </div>
 
