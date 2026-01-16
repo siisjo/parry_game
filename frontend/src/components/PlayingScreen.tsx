@@ -35,6 +35,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   const sequenceOrderRef = useRef(0);
   const patternStartTimeRef = useRef(0);
 
+  const inputGraceUntilRef = useRef(0);
   const LOG_SOURCE = "client_web";
 
   useEffect(() => { scoreRef.current = score; }, [score]);
@@ -84,6 +85,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     });
 
     isInputActive.current = true;
+    inputGraceUntilRef.current = performance.now() + 80;
 
     if (type === "parry" || type === "chainParry") soundManager.play("parry_ready", soundRate);
     else if (type === "fakeParry") soundManager.play("fake_ready", soundRate);
@@ -130,37 +132,49 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       ...(currentPatternRef.current === "starCatch" ? { star_speed: 3 + (scoreRef.current / 1000) * 0.5 } : {})
     });
     incrementGameIndex();
+    if (!isInputActive.current) return;
     isInputActive.current = false;
-    stopCurrentPattern();
-    stopStarMovement();
-    forceFlush();
-    soundManager.stopAll();
-    soundManager.play("game_over");
-    playFailEffect(drawToCanvas, onGameOver);
+
+    setTimeout(() => {
+      stopCurrentPattern();
+      stopStarMovement();
+      forceFlush();
+      soundManager.stopAll();
+      soundManager.play("game_over");
+      playFailEffect(drawToCanvas, onGameOver);
+    }, 50);
   }, [direction, nextPatternDelay, onGameOver, stopStarMovement, drawToCanvas]);
 
   useEffect(() => {
     if (currentPattern === "starCatch" && isInputActive.current) {
-      stopStarMovement(); 
-      setStarPos(0); setBounceCount(0);
-      starDirRef.current = 1; starRef.current = 0;
+      stopStarMovement();
 
-      const randomPos = Math.floor(Math.random() * 81); 
+      setStarPos(0);
+      setBounceCount(0);
+
+      starDirRef.current = 1;
+      starRef.current = 0;
+
+      const randomPos = Math.floor(Math.random() * 81);
       setTargetPos(randomPos);
 
       soundManager.playLoop("star_move", soundRate);
+
       starIntervalRef.current = setInterval(() => {
-        setStarPos(prev => {
-          const moveSpeed = Math.min(7, 3 + (scoreRef.current / 2000) * 0.5);
-          let next = prev + (starDirRef.current * moveSpeed);
-          if (next >= 100 || next <= 0) {
-            starDirRef.current *= -1;
-            setBounceCount(b => b + 1);
-          }
-          starRef.current = next;
-          return next;
-        });
+        const moveSpeed = Math.min(7, 3 + (scoreRef.current / 2000) * 0.5);
+        let next = starRef.current + starDirRef.current * moveSpeed;
+
+        if (next >= 100 || next <= 0) {
+          starDirRef.current *= -1;
+          setBounceCount(b => b + 1); // ✔ bounce 때만 render
+        }
+
+        starRef.current = next;
+
+        // ⭐ state는 최소한으로만
+        setStarPos(next);
       }, 16);
+
       return () => stopStarMovement();
     }
   }, [currentPattern, patternId, soundRate, stopStarMovement]);
@@ -170,6 +184,8 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   }, [bounceCount, currentPattern, handlePatternFail]);
 
   const handleInput = (clientX: number) => {
+    const now = performance.now();
+    if (now < inputGraceUntilRef.current) return;
     if (!isInputActive.current) return;
     if (currentPattern === "starCatch") {
       stopStarMovement();
@@ -245,7 +261,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
           ? "inset 0 0 100px rgba(255, 0, 0, 0.4)" 
           : "none"
       }} 
-      onMouseDown={e => handleInput(e.clientX)}
+      onPointerDown={e => handleInput(e.clientX)}
     >
       {/* SCORE 레이아웃 */}
       <div style={{ 
