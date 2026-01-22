@@ -67,15 +67,14 @@ export default function Home() {
           <div style={{ fontSize: "0.9rem", color: "#ffd700", lineHeight: "1.5" }}>
             {/* 메인 타이틀 */}
             <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-              📢 EVENT: 1월 23일 동일한 랭킹 1위 이벤트 진행 예정 
+              📢 EVENT: 랭킹 1위 달성 시 치킨 기프티콘을 드려요! 
               <span style={{ fontSize: "0.8rem", fontWeight: "normal", marginLeft: "8px" }}>
-                (1/23)
+                (1/25일 11:59분 기준 1위)
               </span>
             </div>
 
             {/* 상세 안내 및 링크 */}
             <div style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "0.75rem", fontWeight: "normal" }}>
-              • 랭킹 1위 '유아렐'님은 아래 오픈채팅 클릭 후 문의 주세요! <br />
               • 비정상적인 방법으로 점수 획득 시 순위에서 제외될 수 있습니다.<br />
               • 1위 인증: 카카오톡 1:1 오픈채팅{' '}
               <a 

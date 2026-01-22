@@ -48,7 +48,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
     ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
   }, []);
 
-  const currentSpeed = Math.max(65, 150 - Math.floor(score / 1000) * 7.5);
+  const currentSpeed = Math.max(70, 150 - Math.floor(score / 1000) * 7.5);
   const nextPatternDelay = Math.max(150, 400 - Math.floor(score / 1000) * 15);
   const soundRate = Math.min(1.5, 1 + (score / 10000) * 0.5);
 
@@ -161,7 +161,7 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
       soundManager.playLoop("star_move", soundRate);
 
       starIntervalRef.current = setInterval(() => {
-        const moveSpeed = Math.min(7, 3 + (scoreRef.current / 2000) * 0.5);
+        const moveSpeed = Math.min(6, 2.5 + (scoreRef.current / 1000) * 0.25);
         let next = starRef.current + starDirRef.current * moveSpeed;
 
         if (next >= 100 || next <= 0) {
@@ -227,22 +227,26 @@ export default function PlayingScreen({ score, setScore, onGameOver }: Props) {
   };
 
   useEffect(() => {
+    if (hasStarted.current) return;
+
     const initGame = () => {
       if (canvasRef.current && !hasStarted.current) {
         hasStarted.current = true;
         startNextPattern();
       }
     };
-    const timer = setTimeout(initGame, 150);
+
+    const timer = setTimeout(initGame, 100);
+    
     return () => { 
       clearTimeout(timer);
       stopCurrentPattern(); 
       stopStarMovement(); 
       soundManager.stopAll(); 
     };
-  }, [startNextPattern]);
+  }, []);
 
-  const isMaxSpeed = currentSpeed <= 65;
+  const isMaxSpeed = currentSpeed <= 70;
 
   return (
     <div 
