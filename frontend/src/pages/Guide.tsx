@@ -58,19 +58,6 @@ export default function Guide() {
             fontWeight: "bold", 
             cursor: "pointer" 
           }}
-          onClick={() => nav("/game")}
-        >
-          이해했어! 시작하기
-        </button>
-
-        <button 
-          style={{ 
-            marginTop: "20px", 
-            color: "#888", 
-            background: "none", 
-            border: "none", 
-            cursor: "pointer" 
-          }} 
           onClick={() => nav("/")}
         >
           뒤로가기
