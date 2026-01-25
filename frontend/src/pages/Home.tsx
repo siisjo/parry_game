@@ -67,9 +67,9 @@ export default function Home() {
           <div style={{ fontSize: "0.9rem", color: "#ffd700", lineHeight: "1.5" }}>
             {/* 메인 타이틀 */}
             <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-              📢 EVENT: 랭킹 1위 달성 시 치킨 기프티콘을 드려요! 
+              📢 플레이 해주신 모든 분들 감사합니다. 
               <span style={{ fontSize: "0.8rem", fontWeight: "normal", marginLeft: "8px" }}>
-                (1/25일 11:59분 기준 1위)
+                (웹사이트는 유지됩니다.)
               </span>
             </div>
 
